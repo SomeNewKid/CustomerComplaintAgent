@@ -1,0 +1,34 @@
+[
+  {
+    "email_id": "E001",
+    "customer_id": "C001",
+    "order_id": "O001",
+    "message": "My mug arrived ten days late and the handle is broken. I would like a refund.",
+    "attachment": "broken-mug.jpg",
+    "status": "open"
+  },
+  {
+    "email_id": "E002",
+    "customer_id": "C002",
+    "order_id": "O004",
+    "message": "The necklace arrived late and the clasp looks damaged. This was very expensive, so I need help.",
+    "attachment": "broken-necklace.jpg",
+    "status": "open"
+  },
+  {
+    "email_id": "E003",
+    "customer_id": null,
+    "order_id": null,
+    "message": "I wanted to say thank you. The service was friendly and helpful.",
+    "attachment": null,
+    "status": "open"
+  },
+  {
+    "email_id": "E004",
+    "customer_id": null,
+    "order_id": null,
+    "message": "Thank you for the beautiful packaging. I took a photo because it looked wonderful.",
+    "attachment": "unbroken-necklace.jpg",
+    "status": "open"
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "product_id": "P001",
+    "name": "Cheap Mug",
+    "category": "homewares",
+    "price": 12.0
+  },
+  {
+    "product_id": "P002",
+    "name": "Expensive Necklace",
+    "category": "jewellery",
+    "price": 850.0
+  }
+]

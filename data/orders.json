@@ -1,0 +1,42 @@
+[
+  {
+    "order_id": "O001",
+    "customer_id": "C001",
+    "product_id": "P001",
+    "order_date": "2026-05-01",
+    "promised_delivery_date": "2026-05-05",
+    "actual_delivery_date": "2026-05-15",
+    "status": "delivered",
+    "refunded": false
+  },
+  {
+    "order_id": "O002",
+    "customer_id": "C001",
+    "product_id": "P001",
+    "order_date": "2026-05-03",
+    "promised_delivery_date": "2026-05-08",
+    "actual_delivery_date": "2026-05-08",
+    "status": "delivered",
+    "refunded": false
+  },
+  {
+    "order_id": "O003",
+    "customer_id": "C002",
+    "product_id": "P001",
+    "order_date": "2026-05-04",
+    "promised_delivery_date": "2026-05-09",
+    "actual_delivery_date": "2026-05-09",
+    "status": "delivered",
+    "refunded": false
+  },
+  {
+    "order_id": "O004",
+    "customer_id": "C002",
+    "product_id": "P002",
+    "order_date": "2026-05-06",
+    "promised_delivery_date": "2026-05-10",
+    "actual_delivery_date": "2026-05-16",
+    "status": "delivered",
+    "refunded": false
+  }
+]
