@@ -16,10 +16,12 @@ from customer_complaint_agent.shared.validation import (
 
 COMPLETION_TYPES = {
     "done": "The agent has completed the goal.",
-    "escalate": "Human review is needed.",
+    "blocked": (
+        "The agent could not complete the goal because required information or "
+        "conditions were missing."
+    ),
     "handoff_request": "Another agent should continue the goal.",
     "approval_request": "Human approval is required before continuing.",
-    "not_implemented": "Placeholder used by deterministic sample agents.",
 }
 
 STATE_UPDATE_OPERATIONS = {

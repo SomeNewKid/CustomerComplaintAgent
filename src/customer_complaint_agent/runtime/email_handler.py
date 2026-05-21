@@ -107,5 +107,5 @@ def _create_tool_registry(agent_name: str, store: Store) -> ToolRegistry:
 def _create_settings() -> Settings:
     return Settings(
         attachments_directory=Path("data/attachments"),
-        max_turns=3,
+        max_turns=5,
     )
