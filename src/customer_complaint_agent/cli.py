@@ -8,7 +8,7 @@ from dataclasses import asdict
 from .harness.runner import RunResult
 from .runtime.email_handler import run_email_handler
 
-RunEmailHandler = Callable[[str], RunResult]
+EmailHandler = Callable[[str], RunResult]
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -33,7 +33,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main(
     argv: list[str] | None = None,
-    email_handler: RunEmailHandler = run_email_handler,
+    email_handler: EmailHandler = run_email_handler,
 ) -> int:
     """Run the command-line application."""
     parser = _build_parser()
