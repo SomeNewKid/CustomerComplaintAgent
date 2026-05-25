@@ -1,0 +1,62 @@
+This codebase is a good teaching specimen: the bones are visible. A real-world evoluation would mostly add durability, richer boundaries, and operational controls.
+
+**Good Evolution Paths**
+1. **Durable Run Storage**
+   Persist `GoalState`, trace events, tool results, validation failures, and final `RunResult` to a database. Real systems need resumability, audit, debugging, and incident review.
+
+2. **Trace Store And Observability**
+   Add structured trace storage, correlation IDs, timings, model call metadata, token/cost estimates, tool latency, and validation failures. This turns the harness into something you can operate, not just run.
+
+3. **Human Review Workflow**
+   Make `approval_request`, `handoff_request`, and `blocked` real. Add queues, reviewer decisions, comments, and resume-from-human-input behavior.
+
+4. **Real Tool Permissions**
+   Move from “runtime selects allowed tools” to explicit authorization policies: which agent, tenant, user, or run may call which tool with which arguments.
+
+5. **Tool Argument Validation**
+   Add schema validation before execution. Currently the code trusts tool arguments after basic decision validation. Real systems validate type, range, required fields, IDs, and authorization.
+
+6. **Idempotency And Side Effects**
+   Add write tools such as `issue_refund`, but require idempotency keys, dry-run mode, confirmation gates, audit records, rollback strategy, and policy checks before execution.
+
+7. **Prompt And Schema Versioning**
+   Version skills, prompts, model schemas, policies, and tools. Store the versions used for each run so old decisions remain explainable.
+
+8. **Policy As Data**
+   Move refund policy from Python into a versioned policy document, rules table, decision tree, or policy engine. Keep deterministic evaluation, but make it inspectable and change-controlled.
+
+9. **Richer State Model**
+   Add open questions, pending decisions, unresolved blockers, confidence, evidence links, and normalized facts. The current state is deliberately small.
+
+10. **Better Retrieval And Context Management**
+   Add document retrieval, source citations, summarization, and context-window management. Real agents need to choose what to show the model each turn.
+
+11. **Model Robustness**
+   Add retry policies, fallback models, structured refusal handling, timeout handling, schema repair, and model output quarantine.
+
+12. **Evaluation Harness**
+   Build regression evals for many complaint scenarios, expected tool sequences, policy outcomes, hallucination checks, and cost/latency budgets.
+
+13. **Multi-Agent Routing**
+   Make routing model-backed or rules-backed, support handoff between agents, and persist why one agent was selected over another.
+
+14. **Security And Privacy**
+   Add PII handling, redaction, least-privilege data access, prompt-injection defenses, attachment scanning, and output filtering.
+
+15. **Configuration And Dependency Injection**
+   Replace hard-coded runtime wiring with environment-specific configuration, factories, or a lightweight container. The sample’s explicit wiring is great for learning; production needs operational flexibility.
+
+16. **Async Execution**
+   Use async model/tool calls, background workers, queues, and cancellation. Real tools and models are slow and failure-prone.
+
+17. **Package/Public API Cleanup**
+   Decide which modules are public, document stable interfaces, and keep internals private. The current project is intentionally transparent rather than library-like.
+
+The most natural “real-world v2” path would be:
+
+1. Add persistence and trace storage.
+2. Add real write tools with guardrails.
+3. Add human approval/resume.
+4. Add policy/versioning/evaluation.
+
+That sequence would preserve the core lesson from this project while moving it toward an operational agentic system.
