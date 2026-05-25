@@ -1,4 +1,4 @@
-"""Deterministic complaint agent placeholder."""
+"""Deterministic complaint agent."""
 
 from customer_complaint_agent.domain.entities import Email, Order, Product
 from customer_complaint_agent.domain.reducers import (
@@ -6,10 +6,7 @@ from customer_complaint_agent.domain.reducers import (
     OrderEntityReducer,
     ProductEntityReducer,
 )
-from customer_complaint_agent.domain.refunds.refund_policy import (
-    RefundFacts,
-    RefundPolicy,
-)
+from customer_complaint_agent.domain.refunds.refund_policy import RefundDecision
 from customer_complaint_agent.shared.agent import (
     ActionDecision,
     AgentDecision,
@@ -21,7 +18,7 @@ from customer_complaint_agent.shared.state import GoalState
 from customer_complaint_agent.shared.validation import ValidationRule
 
 
-class ComplaintAgent:
+class DeterministicComplaintAgent:
     """Agent responsible for complaint email workflows."""
 
     name = "complaint_agent"
@@ -31,6 +28,13 @@ class ComplaintAgent:
         email = self._get_email(request.goal_state)
 
         if email is None:
+            if self._has_tool_result(
+                request.goal_state,
+                "get_email",
+                {"email_id": request.goal_state.root_entity.entity_id},
+            ):
+                return self._blocked_decision("email_not_found")
+
             return ActionDecision(
                 tool_name="get_email",
                 arguments={"email_id": request.goal_state.root_entity.entity_id},
@@ -43,6 +47,13 @@ class ComplaintAgent:
         order = self._get_order(request.goal_state)
 
         if order is None:
+            if self._has_tool_result(
+                request.goal_state,
+                "get_order",
+                {"order_id": email.order_id},
+            ):
+                return self._blocked_decision("order_not_found")
+
             return ActionDecision(
                 tool_name="get_order",
                 arguments={"order_id": email.order_id},
@@ -52,6 +63,13 @@ class ComplaintAgent:
         product = self._get_product(request.goal_state)
 
         if product is None:
+            if self._has_tool_result(
+                request.goal_state,
+                "get_product",
+                {"product_id": order.product_id},
+            ):
+                return self._blocked_decision("product_not_found")
+
             return ActionDecision(
                 tool_name="get_product",
                 arguments={"product_id": order.product_id},
@@ -64,19 +82,39 @@ class ComplaintAgent:
             if email.attachment is None:
                 return self._blocked_decision("missing_attachment")
 
+            if self._has_tool_result(
+                request.goal_state,
+                "verify_damaged_product",
+                {"filename": email.attachment},
+            ):
+                return self._blocked_decision("damage_verification_unavailable")
+
             return ActionDecision(
                 tool_name="verify_damaged_product",
                 arguments={"filename": email.attachment},
                 reason="Need to verify whether the attachment shows damage.",
             )
 
-        refund_decision = RefundPolicy().evaluate(
-            RefundFacts(
-                already_refunded=order.refunded,
-                product_price=product.price,
-                damage_verified=damage_verified,
+        policy_arguments: dict[str, object] = {
+            "already_refunded": order.refunded,
+            "product_price": product.price,
+            "damage_verified": damage_verified,
+        }
+        refund_decision = self._get_refund_decision(request.goal_state)
+
+        if refund_decision is None:
+            if self._has_tool_result(
+                request.goal_state,
+                "evaluate_refund_policy",
+                policy_arguments,
+            ):
+                return self._blocked_decision("refund_policy_unavailable")
+
+            return ActionDecision(
+                tool_name="evaluate_refund_policy",
+                arguments=policy_arguments,
+                reason="Need to evaluate the refund policy from established facts.",
             )
-        )
 
         return FinalDecision(
             completion_type="done",
@@ -137,6 +175,33 @@ class ComplaintAgent:
                 return damage_verified
 
         return None
+
+    def _get_refund_decision(self, goal_state: GoalState) -> RefundDecision | None:
+        for tool_result in goal_state.tool_results:
+            if tool_result.tool_name != "evaluate_refund_policy":
+                continue
+
+            refund_decision = tool_result.data.get("refund_decision")
+
+            if isinstance(refund_decision, RefundDecision):
+                return refund_decision
+
+        return None
+
+    def _has_tool_result(
+        self,
+        goal_state: GoalState,
+        tool_name: str,
+        arguments: dict[str, object],
+    ) -> bool:
+        for tool_result in goal_state.tool_results:
+            if (
+                tool_result.tool_name == tool_name
+                and tool_result.arguments == arguments
+            ):
+                return True
+
+        return False
 
     def _blocked_decision(self, reason_code: str) -> FinalDecision:
         return FinalDecision(

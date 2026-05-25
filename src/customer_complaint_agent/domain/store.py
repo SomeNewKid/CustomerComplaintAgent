@@ -15,7 +15,9 @@ class Store:
     def __init__(self, data_dir: Path | None = None) -> None:
         """Load customer email sample data from JSON files."""
         if data_dir is None:
-            data_dir = Path(__file__).resolve().parents[3] / "data"
+            source_file = Path(__file__)
+            project_root = source_file.resolve().parents[3]
+            data_dir = project_root / "data"
 
         self._emails = _load_records(
             data_dir / "emails.json",
@@ -65,4 +67,10 @@ def _load_records(
         rows: list[dict[str, Any]] = json.load(data_file)
 
     records = [entity_type(**row) for row in rows]
-    return {str(getattr(record, id_field)): record for record in records}
+    records_by_id: dict[str, _Record] = {}
+
+    for record in records:
+        record_id = getattr(record, id_field)
+        records_by_id[str(record_id)] = record
+
+    return records_by_id

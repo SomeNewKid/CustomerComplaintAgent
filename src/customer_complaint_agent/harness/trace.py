@@ -25,4 +25,5 @@ class Trace:
 
     def event(self, sender: str, message: str) -> None:
         """Record a trace event."""
-        self._events.append(TraceEvent(sender=sender, message=message))
+        trace_event = TraceEvent(sender=sender, message=message)
+        self._events.append(trace_event)

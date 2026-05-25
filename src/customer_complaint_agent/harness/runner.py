@@ -12,10 +12,10 @@ from customer_complaint_agent.shared.agent import (
     FinalDecision,
     StateUpdate,
 )
+from customer_complaint_agent.shared.model import ModelClientRegistry
 from customer_complaint_agent.shared.reducer import StateReducer
 from customer_complaint_agent.shared.settings import Settings
 from customer_complaint_agent.shared.state import (
-    EntityRef,
     GoalResult,
     GoalState,
     GoalStatus,
@@ -46,42 +46,50 @@ class RunResult:
     details: dict[str, object]
 
 
-def run_agent_goal(
-    agent: Agent,
-    goal_state: GoalState,
-    tool_registry: ToolRegistry,
-    settings: Settings,
-) -> RunResult:
-    """Run one agent against one goal."""
-    trace = Trace()
-    tool_executor = ToolExecutor(tool_registry)
-    tool_runtime = ToolRuntime(settings=settings)
+class AgentHarness:
+    """Runs agents against goals."""
 
-    _run_agent_loop(
-        agent,
-        goal_state,
-        tool_registry,
-        tool_executor,
-        tool_runtime,
-        settings,
-        trace,
-    )
-
-    if goal_state.status == GoalStatus.COMPLETED:
-        result = goal_state.results[-1]
-        return RunResult(
-            run_id=goal_state.goal_id,
-            status=RunStatus.COMPLETED,
-            completion_type=result.result_type,
-            details=result.data,
+    def run_agent_goal(
+        self,
+        agent: Agent,
+        goal_state: GoalState,
+        tool_registry: ToolRegistry,
+        model_client_registry: ModelClientRegistry,
+        settings: Settings,
+    ) -> RunResult:
+        """Run one agent against one goal."""
+        trace = Trace()
+        tool_executor = ToolExecutor(tool_registry)
+        tool_runtime = ToolRuntime(
+            settings=settings,
+            model_client_registry=model_client_registry,
         )
 
-    return RunResult(
-        run_id=goal_state.goal_id,
-        status=RunStatus.FAILED,
-        completion_type=None,
-        details={"agent": agent.name, "reason_code": "goal_not_completed"},
-    )
+        _run_agent_loop(
+            agent,
+            goal_state,
+            tool_registry,
+            tool_executor,
+            tool_runtime,
+            settings,
+            trace,
+        )
+
+        if goal_state.status == GoalStatus.COMPLETED:
+            result = goal_state.results[-1]
+            return RunResult(
+                run_id=goal_state.goal_id,
+                status=RunStatus.COMPLETED,
+                completion_type=result.result_type,
+                details=result.data,
+            )
+
+        return RunResult(
+            run_id=goal_state.goal_id,
+            status=RunStatus.FAILED,
+            completion_type=None,
+            details={"agent": agent.name, "reason_code": "goal_not_completed"},
+        )
 
 
 def _run_agent_loop(
@@ -96,8 +104,12 @@ def _run_agent_loop(
     done = False
     turns_completed = 0
 
-    while not done and turns_completed < settings.max_turns:
-        decision = agent.decide(AgentRequest(goal_state=goal_state))
+    while not done and turns_completed < settings.max_agent_turns:
+        agent_request = AgentRequest(
+            goal_state=goal_state,
+            tool_registry=tool_registry,
+        )
+        decision = agent.decide(agent_request)
         trace.event(agent.name, decision.reason)
         validation = _validate_agent_decision(
             agent,
@@ -116,10 +128,11 @@ def _run_agent_loop(
         if isinstance(decision, FinalDecision):
             done = _apply_final_decision(goal_state, decision, trace)
         elif isinstance(decision, ActionDecision):
+            reducers = agent.get_state_reducers()
             done = _apply_action_decision(
                 goal_state,
                 decision,
-                agent.get_state_reducers(),
+                reducers,
                 tool_executor,
                 tool_runtime,
                 trace,
@@ -133,7 +146,10 @@ def _run_agent_loop(
 
     if not done:
         goal_state.status = GoalStatus.FAILED
-        trace.event("harness", f"Stopped after reaching {settings.max_turns} turn.")
+        trace.event(
+            "harness",
+            f"Stopped after reaching {settings.max_agent_turns} turn.",
+        )
 
 
 def _validate_agent_decision(
@@ -184,18 +200,15 @@ def _apply_state_updates(
 ) -> None:
     for state_update in state_updates:
         if state_update.operation == "add_claim":
-            source = _entity_ref_from_argument(state_update.arguments["source"])
+            data = _dict_from_argument(state_update.arguments["data"])
             goal_state.add_claim(
                 claim_type=str(state_update.arguments["claim_type"]),
-                source=source,
-                supporting_text=str(state_update.arguments["supporting_text"]),
+                data=data,
             )
         elif state_update.operation == "add_fact":
-            source = _entity_ref_from_argument(state_update.arguments["source"])
             data = _dict_from_argument(state_update.arguments["data"])
             goal_state.add_fact(
                 fact_type=str(state_update.arguments["fact_type"]),
-                source=source,
                 data=data,
             )
         elif state_update.operation == "add_output":
@@ -204,14 +217,6 @@ def _apply_state_updates(
                 output_type=str(state_update.arguments["output_type"]),
                 data=data,
             )
-
-
-def _entity_ref_from_argument(value: object) -> EntityRef:
-    source = _dict_from_argument(value)
-    return EntityRef(
-        entity_type=str(source["entity_type"]),
-        entity_id=str(source["entity_id"]),
-    )
 
 
 def _dict_from_argument(value: object) -> dict[str, object]:

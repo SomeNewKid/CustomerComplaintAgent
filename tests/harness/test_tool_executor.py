@@ -3,9 +3,11 @@ from pathlib import Path
 import pytest
 
 from customer_complaint_agent.harness.tool_executor import ToolExecutor
+from customer_complaint_agent.shared.model import ModelClientRegistry
 from customer_complaint_agent.shared.settings import Settings
 from customer_complaint_agent.shared.state import ToolResult
 from customer_complaint_agent.shared.tool import (
+    ToolArgument,
     ToolRegistry,
     ToolRequest,
     ToolRuntime,
@@ -14,6 +16,14 @@ from customer_complaint_agent.shared.tool import (
 
 class _FakeTool:
     name = "fake_tool"
+    description = "Fake tool used by tool executor tests."
+    arguments = (
+        ToolArgument(
+            name="value",
+            argument_type="string",
+            description="A fake tool value.",
+        ),
+    )
 
     def execute(
         self,
@@ -58,6 +68,8 @@ def _tool_runtime() -> ToolRuntime:
     return ToolRuntime(
         settings=Settings(
             attachments_directory=Path("data/attachments"),
-            max_turns=3,
+            max_agent_turns=3,
+            max_paid_model_calls=0,
         ),
+        model_client_registry=ModelClientRegistry(clients=()),
     )

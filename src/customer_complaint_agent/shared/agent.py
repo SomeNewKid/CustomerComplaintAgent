@@ -10,6 +10,7 @@ from .state import GoalState
 
 if TYPE_CHECKING:
     from .reducer import StateReducer
+    from .tool import ToolRegistry
     from .validation import ValidationRule
 
 
@@ -18,6 +19,7 @@ class AgentRequest:
     """Request passed from the harness to an agent."""
 
     goal_state: GoalState
+    tool_registry: ToolRegistry
 
 
 @dataclass(frozen=True)

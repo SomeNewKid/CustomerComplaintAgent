@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from customer_complaint_agent.harness.runner import RunStatus, run_agent_goal
+from customer_complaint_agent.harness.runner import AgentHarness, RunStatus
 from customer_complaint_agent.shared.agent import (
     ActionDecision,
     AgentDecision,
@@ -8,6 +8,7 @@ from customer_complaint_agent.shared.agent import (
     FinalDecision,
     StateUpdate,
 )
+from customer_complaint_agent.shared.model import ModelClientRegistry
 from customer_complaint_agent.shared.reducer import StateReducer
 from customer_complaint_agent.shared.settings import Settings
 from customer_complaint_agent.shared.state import (
@@ -17,7 +18,12 @@ from customer_complaint_agent.shared.state import (
     GoalStatus,
     ToolResult,
 )
-from customer_complaint_agent.shared.tool import ToolRegistry, ToolRequest, ToolRuntime
+from customer_complaint_agent.shared.tool import (
+    ToolArgument,
+    ToolRegistry,
+    ToolRequest,
+    ToolRuntime,
+)
 from customer_complaint_agent.shared.validation import ValidationRule
 
 
@@ -68,8 +74,7 @@ class _ClaimingToolUsingAgent:
                     operation="add_claim",
                     arguments={
                         "claim_type": "damaged_product",
-                        "source": {"entity_type": "email", "entity_id": "E001"},
-                        "supporting_text": "the handle is broken",
+                        "data": {"supporting_text": "the handle is broken"},
                     },
                 )
             ],
@@ -95,6 +100,14 @@ class _CustomerReferenceReducer:
 
 class _FakeTool:
     name = "fake_tool"
+    description = "Fake tool used by harness runner tests."
+    arguments = (
+        ToolArgument(
+            name="value",
+            argument_type="string",
+            description="A fake tool value.",
+        ),
+    )
 
     def execute(
         self,
@@ -110,6 +123,14 @@ class _FakeTool:
 
 class _ClaimAwareTool:
     name = "claim_aware_tool"
+    description = "Fake tool that observes claim state during execution."
+    arguments = (
+        ToolArgument(
+            name="value",
+            argument_type="string",
+            description="A fake tool value.",
+        ),
+    )
 
     def __init__(self, goal_state: GoalState) -> None:
         self._goal_state = goal_state
@@ -129,13 +150,16 @@ class _ClaimAwareTool:
 def test_agent_loop_continues_after_action_decision() -> None:
     goal_state = _goal_state()
 
-    result = run_agent_goal(
+    agent_harness = AgentHarness()
+    result = agent_harness.run_agent_goal(
         agent=_ToolUsingAgent(),
         goal_state=goal_state,
         tool_registry=ToolRegistry(tools=(_FakeTool(),)),
+        model_client_registry=ModelClientRegistry(clients=()),
         settings=Settings(
             attachments_directory=Path("data/attachments"),
-            max_turns=2,
+            max_agent_turns=2,
+            max_paid_model_calls=0,
         ),
     )
 
@@ -154,13 +178,16 @@ def test_agent_loop_continues_after_action_decision() -> None:
 def test_agent_loop_applies_state_reducers_after_action_decision() -> None:
     goal_state = _goal_state()
 
-    result = run_agent_goal(
+    agent_harness = AgentHarness()
+    result = agent_harness.run_agent_goal(
         agent=_ToolUsingAgent(reducers=[_CustomerReferenceReducer()]),
         goal_state=goal_state,
         tool_registry=ToolRegistry(tools=(_FakeTool(),)),
+        model_client_registry=ModelClientRegistry(clients=()),
         settings=Settings(
             attachments_directory=Path("data/attachments"),
-            max_turns=2,
+            max_agent_turns=2,
+            max_paid_model_calls=0,
         ),
     )
 
@@ -174,13 +201,16 @@ def test_agent_loop_applies_state_reducers_after_action_decision() -> None:
 def test_agent_loop_applies_state_updates_before_action_decision() -> None:
     goal_state = _goal_state()
 
-    result = run_agent_goal(
+    agent_harness = AgentHarness()
+    result = agent_harness.run_agent_goal(
         agent=_ClaimingToolUsingAgent(),
         goal_state=goal_state,
         tool_registry=ToolRegistry(tools=(_ClaimAwareTool(goal_state),)),
+        model_client_registry=ModelClientRegistry(clients=()),
         settings=Settings(
             attachments_directory=Path("data/attachments"),
-            max_turns=2,
+            max_agent_turns=2,
+            max_paid_model_calls=0,
         ),
     )
 
@@ -188,8 +218,7 @@ def test_agent_loop_applies_state_updates_before_action_decision() -> None:
     assert goal_state.claims == [
         Claim(
             claim_type="damaged_product",
-            source=EntityRef(entity_type="email", entity_id="E001"),
-            supporting_text="the handle is broken",
+            data={"supporting_text": "the handle is broken"},
         )
     ]
     assert goal_state.tool_results == [

@@ -1,7 +1,5 @@
 """Harness validation rules."""
 
-from typing import cast
-
 from customer_complaint_agent.shared.agent import (
     ActionDecision,
     AgentDecision,
@@ -13,22 +11,10 @@ from customer_complaint_agent.shared.validation import (
     ValidationError,
     ValidationRule,
 )
-
-COMPLETION_TYPES = {
-    "done": "The agent has completed the goal.",
-    "blocked": (
-        "The agent could not complete the goal because required information or "
-        "conditions were missing."
-    ),
-    "handoff_request": "Another agent should continue the goal.",
-    "approval_request": "Human approval is required before continuing.",
-}
-
-STATE_UPDATE_OPERATIONS = {
-    "add_claim",
-    "add_fact",
-    "add_output",
-}
+from customer_complaint_agent.shared.vocabulary import (
+    COMPLETION_TYPES,
+    STATE_UPDATE_OPERATIONS,
+)
 
 
 class CompletionTypeRule:
@@ -140,11 +126,11 @@ class StateUpdateShapeRule:
                 continue
 
             if state_update.operation == "add_claim":
-                errors.extend(self._validate_add_claim(state_update.arguments))
+                claim_errors = self._validate_add_claim(state_update.arguments)
+                errors.extend(claim_errors)
             elif state_update.operation == "add_fact":
-                errors.extend(self._validate_add_fact(state_update.arguments))
-            elif state_update.operation == "add_output":
-                errors.extend(self._validate_add_output(state_update.arguments))
+                fact_errors = self._validate_add_fact(state_update.arguments)
+                errors.extend(fact_errors)
 
         return errors
 
@@ -162,21 +148,11 @@ class StateUpdateShapeRule:
                 )
             )
 
-        if not self._has_valid_source(arguments):
+        if not self._has_dict(arguments, "data"):
             errors.append(
                 ValidationError(
-                    code="invalid_source",
-                    message=(
-                        "State update source must include entity_type and entity_id."
-                    ),
-                )
-            )
-
-        if not self._has_non_empty_string(arguments, "supporting_text"):
-            errors.append(
-                ValidationError(
-                    code="missing_supporting_text",
-                    message="State update add_claim must include supporting text.",
+                    code="missing_data",
+                    message="State update add_claim must include data.",
                 )
             )
 
@@ -196,45 +172,11 @@ class StateUpdateShapeRule:
                 )
             )
 
-        if not self._has_valid_source(arguments):
-            errors.append(
-                ValidationError(
-                    code="invalid_source",
-                    message=(
-                        "State update source must include entity_type and entity_id."
-                    ),
-                )
-            )
-
         if not self._has_dict(arguments, "data"):
             errors.append(
                 ValidationError(
                     code="missing_data",
                     message="State update add_fact must include data.",
-                )
-            )
-
-        return errors
-
-    def _validate_add_output(
-        self,
-        arguments: dict[str, object],
-    ) -> list[ValidationError]:
-        errors: list[ValidationError] = []
-
-        if not self._has_non_empty_string(arguments, "output_type"):
-            errors.append(
-                ValidationError(
-                    code="missing_output_type",
-                    message="State update add_output must include an output type.",
-                )
-            )
-
-        if not self._has_dict(arguments, "data"):
-            errors.append(
-                ValidationError(
-                    code="missing_data",
-                    message="State update add_output must include data.",
                 )
             )
 
@@ -255,22 +197,6 @@ class StateUpdateShapeRule:
     ) -> bool:
         value = arguments.get(key)
         return isinstance(value, str) and bool(value)
-
-    def _has_valid_source(self, arguments: dict[str, object]) -> bool:
-        source = arguments.get("source")
-
-        if not isinstance(source, dict):
-            return False
-
-        source_arguments = cast(dict[str, object], source)
-        entity_type = source_arguments.get("entity_type")
-        entity_id = source_arguments.get("entity_id")
-        return (
-            isinstance(entity_type, str)
-            and bool(entity_type)
-            and isinstance(entity_id, str)
-            and bool(entity_id)
-        )
 
 
 HARNESS_VALIDATION_RULES: list[ValidationRule] = [

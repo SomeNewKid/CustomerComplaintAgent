@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
+from .model import ModelClientRegistry
 from .settings import Settings
 from .state import ToolResult
 
@@ -14,12 +15,24 @@ class ToolRuntime:
     """Harness-provided runtime values hidden from the LLM tool request."""
 
     settings: Settings
+    model_client_registry: ModelClientRegistry
+
+
+@dataclass(frozen=True)
+class ToolArgument:
+    """Argument accepted by a tool."""
+
+    name: str
+    argument_type: str
+    description: str
 
 
 class Tool(Protocol):
     """Protocol implemented by tools executed by the harness."""
 
     name: str
+    description: str
+    arguments: tuple[ToolArgument, ...]
 
     def execute(
         self,

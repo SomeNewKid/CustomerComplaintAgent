@@ -1,1 +1,1 @@
-"""Customer complaint agent sample application."""
+"""Customer email agent sample application."""

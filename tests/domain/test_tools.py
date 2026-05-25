@@ -1,8 +1,10 @@
 from pathlib import Path
 
 from customer_complaint_agent.domain.entities import Customer, Email, Order, Product
+from customer_complaint_agent.domain.refunds.refund_policy import RefundDecision
 from customer_complaint_agent.domain.store import Store
 from customer_complaint_agent.domain.tools import (
+    EvaluateRefundPolicyTool,
     GetCustomerTool,
     GetEmailTool,
     GetOrderTool,
@@ -11,6 +13,7 @@ from customer_complaint_agent.domain.tools import (
 )
 from customer_complaint_agent.shared.settings import Settings
 from customer_complaint_agent.shared.tool import ToolRuntime
+from tests.support.fake_model_clients import create_fake_vision_model_registry
 
 
 def test_get_email_tool_returns_existing_email() -> None:
@@ -115,6 +118,8 @@ def test_verify_damaged_product_tool_verifies_broken_attachment() -> None:
         "filename": "broken-mug.jpg",
         "attachment_exists": True,
         "damage_verified": True,
+        "confidence": 1.0,
+        "supporting_text": "The filename indicates a broken product.",
     }
 
 
@@ -132,6 +137,8 @@ def test_verify_damaged_product_tool_rejects_unbroken_attachment() -> None:
         "filename": "unbroken-necklace.jpg",
         "attachment_exists": True,
         "damage_verified": False,
+        "confidence": 1.0,
+        "supporting_text": "The filename does not indicate a broken product.",
     }
 
 
@@ -149,13 +156,87 @@ def test_verify_damaged_product_tool_reports_missing_attachment() -> None:
         "filename": "missing.jpg",
         "attachment_exists": False,
         "damage_verified": False,
+        "confidence": 0.0,
+        "supporting_text": "Attachment file was not found.",
     }
+
+
+def test_evaluate_refund_policy_tool_declines_already_refunded_order() -> None:
+    result = EvaluateRefundPolicyTool().execute(
+        {
+            "already_refunded": True,
+            "product_price": 25.0,
+            "damage_verified": True,
+        },
+        _tool_runtime(),
+    )
+
+    assert result.tool_name == "evaluate_refund_policy"
+    assert result.arguments == {
+        "already_refunded": True,
+        "product_price": 25.0,
+        "damage_verified": True,
+    }
+    refund_decision = result.data["refund_decision"]
+    assert isinstance(refund_decision, RefundDecision)
+    assert refund_decision.decision_type == "decline"
+    assert refund_decision.reason_code == "already_refunded"
+
+
+def test_evaluate_refund_policy_tool_declines_unverified_damage() -> None:
+    result = EvaluateRefundPolicyTool().execute(
+        {
+            "already_refunded": False,
+            "product_price": 25.0,
+            "damage_verified": False,
+        },
+        _tool_runtime(),
+    )
+
+    refund_decision = result.data["refund_decision"]
+    assert isinstance(refund_decision, RefundDecision)
+    assert refund_decision.decision_type == "decline"
+    assert refund_decision.reason_code == "damage_not_verified"
+
+
+def test_evaluate_refund_policy_tool_refunds_cheap_damaged_product() -> None:
+    result = EvaluateRefundPolicyTool().execute(
+        {
+            "already_refunded": False,
+            "product_price": 25.0,
+            "damage_verified": True,
+        },
+        _tool_runtime(),
+    )
+
+    refund_decision = result.data["refund_decision"]
+    assert isinstance(refund_decision, RefundDecision)
+    assert refund_decision.decision_type == "refund"
+    assert refund_decision.reason_code == "damaged_cheap_item"
+
+
+def test_evaluate_refund_policy_tool_escalates_expensive_damaged_product() -> None:
+    result = EvaluateRefundPolicyTool().execute(
+        {
+            "already_refunded": False,
+            "product_price": 100.0,
+            "damage_verified": True,
+        },
+        _tool_runtime(),
+    )
+
+    refund_decision = result.data["refund_decision"]
+    assert isinstance(refund_decision, RefundDecision)
+    assert refund_decision.decision_type == "escalate"
+    assert refund_decision.reason_code == "damaged_expensive_item"
 
 
 def _tool_runtime() -> ToolRuntime:
     return ToolRuntime(
         settings=Settings(
             attachments_directory=Path("data/attachments"),
-            max_turns=3,
+            max_agent_turns=3,
+            max_paid_model_calls=0,
         ),
+        model_client_registry=create_fake_vision_model_registry(),
     )

@@ -2,6 +2,7 @@ import pytest
 
 from customer_complaint_agent.shared.state import ToolResult
 from customer_complaint_agent.shared.tool import (
+    ToolArgument,
     ToolRegistry,
     ToolRequest,
     ToolRuntime,
@@ -10,6 +11,14 @@ from customer_complaint_agent.shared.tool import (
 
 class _FakeTool:
     name = "fake_tool"
+    description = "Fake tool used by tool registry tests."
+    arguments = (
+        ToolArgument(
+            name="value",
+            argument_type="string",
+            description="A fake tool value.",
+        ),
+    )
 
     def execute(
         self,
@@ -25,6 +34,14 @@ class _FakeTool:
 
 class _DuplicateFakeTool:
     name = "fake_tool"
+    description = "Duplicate fake tool used by tool registry tests."
+    arguments = (
+        ToolArgument(
+            name="value",
+            argument_type="string",
+            description="A fake tool value.",
+        ),
+    )
 
     def execute(
         self,

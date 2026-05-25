@@ -9,4 +9,5 @@ class Settings:
     """Configuration supplied by the harness at runtime."""
 
     attachments_directory: Path
-    max_turns: int
+    max_agent_turns: int
+    max_paid_model_calls: int

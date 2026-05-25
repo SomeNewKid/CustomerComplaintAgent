@@ -10,30 +10,25 @@ from customer_complaint_agent.shared.state import (
 
 def test_goal_state_adds_claim() -> None:
     goal_state = _goal_state()
-    source = EntityRef(entity_type="email", entity_id="E001")
 
     goal_state.add_claim(
         claim_type="damaged_product",
-        source=source,
-        supporting_text="the handle is broken",
+        data={"supporting_text": "the handle is broken"},
     )
 
     assert goal_state.claims == [
         Claim(
             claim_type="damaged_product",
-            source=source,
-            supporting_text="the handle is broken",
+            data={"supporting_text": "the handle is broken"},
         )
     ]
 
 
 def test_goal_state_adds_fact() -> None:
     goal_state = _goal_state()
-    source = EntityRef(entity_type="email", entity_id="E001")
 
     goal_state.add_fact(
         fact_type="garment_wear_status",
-        source=source,
         data={
             "worn": True,
             "confidence": 0.94,
@@ -44,7 +39,6 @@ def test_goal_state_adds_fact() -> None:
     assert goal_state.facts == [
         Fact(
             fact_type="garment_wear_status",
-            source=source,
             data={
                 "worn": True,
                 "confidence": 0.94,

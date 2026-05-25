@@ -15,11 +15,24 @@ from customer_complaint_agent.shared.state import (
     GoalStatus,
     ToolResult,
 )
-from customer_complaint_agent.shared.tool import ToolRegistry, ToolRequest, ToolRuntime
+from customer_complaint_agent.shared.tool import (
+    ToolArgument,
+    ToolRegistry,
+    ToolRequest,
+    ToolRuntime,
+)
 
 
 class _FakeTool:
     name = "fake_tool"
+    description = "Fake tool used by harness rule tests."
+    arguments = (
+        ToolArgument(
+            name="value",
+            argument_type="string",
+            description="A fake tool value.",
+        ),
+    )
 
     def execute(
         self,
@@ -202,8 +215,7 @@ def test_state_update_shape_rule_rejects_missing_claim_type() -> None:
         StateUpdate(
             operation="add_claim",
             arguments={
-                "source": {"entity_type": "email", "entity_id": "E001"},
-                "supporting_text": "the handle is broken",
+                "data": {"supporting_text": "the handle is broken"},
             },
         )
     )
@@ -214,15 +226,13 @@ def test_state_update_shape_rule_rejects_missing_claim_type() -> None:
     assert errors[0].code == "missing_claim_type"
 
 
-def test_state_update_shape_rule_rejects_malformed_source() -> None:
+def test_state_update_shape_rule_rejects_claim_with_missing_data() -> None:
     rule = StateUpdateShapeRule()
     decision = _decision_with_state_update(
         StateUpdate(
             operation="add_claim",
             arguments={
                 "claim_type": "damaged_product",
-                "source": {"entity_type": "email"},
-                "supporting_text": "the handle is broken",
             },
         )
     )
@@ -230,25 +240,7 @@ def test_state_update_shape_rule_rejects_malformed_source() -> None:
     errors = rule.validate(decision, _goal_state())
 
     assert len(errors) == 1
-    assert errors[0].code == "invalid_source"
-
-
-def test_state_update_shape_rule_rejects_missing_supporting_text() -> None:
-    rule = StateUpdateShapeRule()
-    decision = _decision_with_state_update(
-        StateUpdate(
-            operation="add_claim",
-            arguments={
-                "claim_type": "damaged_product",
-                "source": {"entity_type": "email", "entity_id": "E001"},
-            },
-        )
-    )
-
-    errors = rule.validate(decision, _goal_state())
-
-    assert len(errors) == 1
-    assert errors[0].code == "missing_supporting_text"
+    assert errors[0].code == "missing_data"
 
 
 def test_state_update_shape_rule_accepts_valid_add_claim() -> None:
@@ -258,8 +250,7 @@ def test_state_update_shape_rule_accepts_valid_add_claim() -> None:
             operation="add_claim",
             arguments={
                 "claim_type": "damaged_product",
-                "source": {"entity_type": "email", "entity_id": "E001"},
-                "supporting_text": "the handle is broken",
+                "data": {"supporting_text": "the handle is broken"},
             },
         )
     )
@@ -275,7 +266,6 @@ def test_state_update_shape_rule_rejects_missing_fact_type() -> None:
         StateUpdate(
             operation="add_fact",
             arguments={
-                "source": {"entity_type": "email", "entity_id": "E001"},
                 "data": {"damage_verified": True},
             },
         )
@@ -287,25 +277,6 @@ def test_state_update_shape_rule_rejects_missing_fact_type() -> None:
     assert errors[0].code == "missing_fact_type"
 
 
-def test_state_update_shape_rule_rejects_fact_with_malformed_source() -> None:
-    rule = StateUpdateShapeRule()
-    decision = _decision_with_state_update(
-        StateUpdate(
-            operation="add_fact",
-            arguments={
-                "fact_type": "damage_verification",
-                "source": {"entity_type": "email"},
-                "data": {"damage_verified": True},
-            },
-        )
-    )
-
-    errors = rule.validate(decision, _goal_state())
-
-    assert len(errors) == 1
-    assert errors[0].code == "invalid_source"
-
-
 def test_state_update_shape_rule_rejects_fact_with_missing_data() -> None:
     rule = StateUpdateShapeRule()
     decision = _decision_with_state_update(
@@ -313,7 +284,6 @@ def test_state_update_shape_rule_rejects_fact_with_missing_data() -> None:
             operation="add_fact",
             arguments={
                 "fact_type": "damage_verification",
-                "source": {"entity_type": "email", "entity_id": "E001"},
             },
         )
     )
@@ -331,55 +301,7 @@ def test_state_update_shape_rule_accepts_valid_add_fact() -> None:
             operation="add_fact",
             arguments={
                 "fact_type": "damage_verification",
-                "source": {"entity_type": "email", "entity_id": "E001"},
                 "data": {"damage_verified": True},
-            },
-        )
-    )
-
-    errors = rule.validate(decision, _goal_state())
-
-    assert errors == []
-
-
-def test_state_update_shape_rule_rejects_missing_output_type() -> None:
-    rule = StateUpdateShapeRule()
-    decision = _decision_with_state_update(
-        StateUpdate(
-            operation="add_output",
-            arguments={"data": {"body": "Thank you for contacting us."}},
-        )
-    )
-
-    errors = rule.validate(decision, _goal_state())
-
-    assert len(errors) == 1
-    assert errors[0].code == "missing_output_type"
-
-
-def test_state_update_shape_rule_rejects_output_with_missing_data() -> None:
-    rule = StateUpdateShapeRule()
-    decision = _decision_with_state_update(
-        StateUpdate(
-            operation="add_output",
-            arguments={"output_type": "draft_email"},
-        )
-    )
-
-    errors = rule.validate(decision, _goal_state())
-
-    assert len(errors) == 1
-    assert errors[0].code == "missing_data"
-
-
-def test_state_update_shape_rule_accepts_valid_add_output() -> None:
-    rule = StateUpdateShapeRule()
-    decision = _decision_with_state_update(
-        StateUpdate(
-            operation="add_output",
-            arguments={
-                "output_type": "draft_email",
-                "data": {"body": "Thank you for contacting us."},
             },
         )
     )

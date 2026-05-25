@@ -2,8 +2,12 @@
 
 from collections.abc import Mapping
 
-from customer_complaint_agent.agents.complaint_agent import ComplaintAgent
-from customer_complaint_agent.agents.compliment_agent import ComplimentAgent
+from customer_complaint_agent.agents.deterministic_complaint_agent import (
+    DeterministicComplaintAgent,
+)
+from customer_complaint_agent.agents.deterministic_compliment_agent import (
+    DeterministicComplimentAgent,
+)
 from customer_complaint_agent.shared.agent import Agent
 
 
@@ -14,8 +18,8 @@ class AgentRegistry:
         """Create a registry with default agents unless agents are provided."""
         if agents is None:
             agents = {
-                ComplaintAgent.name: ComplaintAgent(),
-                ComplimentAgent.name: ComplimentAgent(),
+                DeterministicComplaintAgent.name: DeterministicComplaintAgent(),
+                DeterministicComplimentAgent.name: DeterministicComplimentAgent(),
             }
 
         self._agents = dict(agents)

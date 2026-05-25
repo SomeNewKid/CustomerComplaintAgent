@@ -3,6 +3,7 @@ name = "customer-complaint-agent"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
+    "openai",
 ]
 
 [project.optional-dependencies]

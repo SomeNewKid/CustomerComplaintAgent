@@ -10,7 +10,6 @@ class GoalStatus(StrEnum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
-    ESCALATED = "escalated"
 
 
 @dataclass(frozen=True)
@@ -35,8 +34,7 @@ class Claim:
     """Validated structured claim recorded during an agent run."""
 
     claim_type: str
-    source: EntityRef
-    supporting_text: str
+    data: dict[str, object]
 
 
 @dataclass(frozen=True)
@@ -44,7 +42,6 @@ class Fact:
     """Validated structured fact recorded during an agent run."""
 
     fact_type: str
-    source: EntityRef
     data: dict[str, object]
 
 
@@ -96,29 +93,25 @@ class GoalState:
     def add_claim(
         self,
         claim_type: str,
-        source: EntityRef,
-        supporting_text: str,
+        data: dict[str, object],
     ) -> None:
         """Add a claim to the goal state."""
         self.claims.append(
             Claim(
                 claim_type=claim_type,
-                source=source,
-                supporting_text=supporting_text,
+                data=data,
             )
         )
 
     def add_fact(
         self,
         fact_type: str,
-        source: EntityRef,
         data: dict[str, object],
     ) -> None:
         """Add a fact to the goal state."""
         self.facts.append(
             Fact(
                 fact_type=fact_type,
-                source=source,
                 data=data,
             )
         )

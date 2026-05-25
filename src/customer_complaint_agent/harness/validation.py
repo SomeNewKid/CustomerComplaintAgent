@@ -17,6 +17,7 @@ def validate_decision(
     """Validate an agent decision using the provided rules."""
     errors: list[ValidationError] = []
     for rule in rules:
-        errors.extend(rule.validate(decision, goal_state))
+        rule_errors = rule.validate(decision, goal_state)
+        errors.extend(rule_errors)
 
     return ValidationResult(errors=errors)

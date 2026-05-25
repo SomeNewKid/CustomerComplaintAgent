@@ -1,6 +1,7 @@
-"""Run the customer complaint agent as a Python module."""
+"""Run the customer email agent as a Python module."""
 
 from customer_complaint_agent.cli import main
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    exit_code = main()
+    raise SystemExit(exit_code)

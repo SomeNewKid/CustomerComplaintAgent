@@ -1,4 +1,4 @@
-"""Deterministic compliment agent placeholder."""
+"""Deterministic compliment agent."""
 
 from customer_complaint_agent.domain.entities import Email
 from customer_complaint_agent.domain.reducers import EmailEntityReducer
@@ -9,10 +9,11 @@ from customer_complaint_agent.shared.agent import (
     FinalDecision,
 )
 from customer_complaint_agent.shared.reducer import StateReducer
+from customer_complaint_agent.shared.state import GoalState
 from customer_complaint_agent.shared.validation import ValidationRule
 
 
-class ComplimentAgent:
+class DeterministicComplimentAgent:
     """Agent responsible for compliment email workflows."""
 
     name = "compliment_agent"
@@ -22,6 +23,13 @@ class ComplimentAgent:
         email = self._get_email_from_tool_results(request)
 
         if email is None:
+            if self._has_tool_result(
+                request.goal_state,
+                "get_email",
+                {"email_id": request.goal_state.root_entity.entity_id},
+            ):
+                return self._blocked_decision("email_not_found")
+
             return ActionDecision(
                 tool_name="get_email",
                 arguments={"email_id": request.goal_state.root_entity.entity_id},
@@ -57,3 +65,25 @@ class ComplimentAgent:
                 return email
 
         return None
+
+    def _has_tool_result(
+        self,
+        goal_state: GoalState,
+        tool_name: str,
+        arguments: dict[str, object],
+    ) -> bool:
+        for tool_result in goal_state.tool_results:
+            if (
+                tool_result.tool_name == tool_name
+                and tool_result.arguments == arguments
+            ):
+                return True
+
+        return False
+
+    def _blocked_decision(self, reason_code: str) -> FinalDecision:
+        return FinalDecision(
+            completion_type="blocked",
+            details={"reason_code": reason_code},
+            reason="Compliment handling could not continue.",
+        )
