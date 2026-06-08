@@ -5,6 +5,9 @@
 This project is a purposely simple Python sample for learning how an AI agent and
 an agent harness work together.
 
+> [!WARNING]
+> This is an experimental project and should not be considered production-ready.
+
 It is not intended to be a real-life reusable agent framework, production email
 system, CRM integration, or complete customer service automation. The code is
 small on purpose so the main concepts are visible:
@@ -75,3 +78,11 @@ make paid model calls.
 ## Architecture
 
 The architectural explanation is available in the `ARCHITECTURE.md` document.
+
+## Third-Party Notices
+
+This project has a direct runtime dependency on the `openai` Python package (Apache-2.0). See the package's PyPI license metadata for full license and notice terms.
+
+## License
+
+GNU General Public License v3.0. See the `LICENSE` file for details.
